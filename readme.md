@@ -47,34 +47,47 @@ The project follows a modular design with two main pipelines:
 
 ```mermaid
 graph TD
-    subaxis((Vault))
-    
-    subgraph "scripts/ingest.py"
-        CD[Change Detection]
-        C[core/chunking.py]
-        E[core/embeddings.py]
-        D[core/db.py]
-        
-        CD -->|files_to_process| C
-        C -->|flat documents| E
-        E -->|vectors| D
-    end
-    
-    subgraph "scripts/query.py"
-        Q[User Query]
-        QE[core/embeddings.py]
-        R[core/retrieval.py]
-        DB[core/db.py]
-        L[core/llm.py]
-        
-        Q --> QE
-        QE --> R
-        R <-->|Hybrid + RRF| DB
-        R -->|Top K Results| L
-        L --> Answer
+    %% Styling
+    classDef file fill:#2d333b,stroke:#444c56,color:#adbac7;
+    classDef script fill:#539bf5,stroke:#2b6a30,color:#fff,font-weight:bold;
+    classDef core fill:#348039,stroke:#2b6a30,color:#fff;
+    classDef db fill:#b083f0,stroke:#6e40c9,color:#fff;
+    classDef llm fill:#e34c26,stroke:#f0883e,color:#fff;
+
+    Vault[(Obsidian Vault)]:::file
+    DB[(LanceDB)]:::db
+    User((User)):::file
+    Answer>LLM Answer]:::llm
+
+    subgraph "Ingestion Pipeline"
+        Ingest[scripts/ingest.py]:::script
+        Chunk[core/chunking.py]:::core
+        EmbedI[core/embeddings.py]:::core
+        DBWrite[core/db.py]:::core
     end
 
-    subaxis -.-> CD
+    subgraph "Retrieval Pipeline"
+        Query[scripts/query.py]:::script
+        EmbedQ[core/embeddings.py]:::core
+        Ret[core/retrieval.py]:::core
+        LLM[core/llm.py]:::llm
+    end
+
+    %% Flow: Ingestion (Left Column)
+    Vault -- "Reads .md (if changed)" --> Ingest
+    Ingest -- "Content" --> Chunk
+    Chunk -- "Flat Chunks + IDs" --> EmbedI
+    EmbedI -- "Vectors" --> DBWrite
+    DBWrite -- "Save Data & Index FTS" --> DB
+
+    %% Flow: Retrieval (Right Column)
+    User -- "Asks Question" --> Query
+    Query -- "Raw Text" --> EmbedQ
+    EmbedQ -- "Query Vector" --> Ret
+    Ret <== "Vector + BM25 Search" ==> DB
+    Ret -- "RRF Fused Results" --> Query
+    Query -- "Context + Prompt" --> LLM
+    LLM -- "Generates" --> Answer
 ```
 
 ## Tech Stack
