@@ -16,7 +16,8 @@ class LLM:
 
     def _build_prompt(self, query, context):
         self.prompt = f"""
-        Use the following context to respond the question, in case of not founding any useful information, respond saying "there is no information available"
+        Use the following context to respond the question, in case of not founding any useful information, respond saying only and nothing else: 
+        "there is no information available"
         CONTEXT:
         {context}
 

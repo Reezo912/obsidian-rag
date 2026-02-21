@@ -22,6 +22,7 @@ The project follows a modular design with two main pipelines:
 
 ### ✅ Implemented
 - Ingestion pipeline with incremental change detection (new/modified/deleted files)
+- Refactored `scripts/ingest.py` to use modular `core/` components (no duplicated logic)
 - Markdown chunking by headers (`h1`, `h2`, `h3`) with empty chunk filtering
 - Deterministic chunk IDs via content hashing
 - Embedding generation with `bge-large-en-v1.5` (GPU)
@@ -32,10 +33,7 @@ The project follows a modular design with two main pipelines:
 - Modular `core/` package: `db.py`, `chunking.py`, `embeddings.py`, `retrieval.py`, `llm.py`
 - CLI query script (`scripts/query.py`)
 - Centralized configuration (`config.py`)
-
-### 🚧 In Progress
-- Refactoring `scripts/ingest.py` to use `core/` modules (currently has duplicated logic)
-- Removing deprecated monolithic search script (`core/search.py`)
+- Removed deprecated monolithic search script (`core/search.py`)
 
 ### 📋 Planned
 - Cross-encoder re-ranking (`cross-encoder/ms-marco-MiniLM-L-6-v2`) for precision filtering
@@ -44,6 +42,40 @@ The project follows a modular design with two main pipelines:
 - FastAPI endpoint for programmatic access
 - Open WebUI integration for a proper chat interface
 - Tests
+
+## Architecture Flow
+
+```mermaid
+graph TD
+    subaxis((Vault))
+    
+    subgraph "scripts/ingest.py"
+        CD[Change Detection]
+        C[core/chunking.py]
+        E[core/embeddings.py]
+        D[core/db.py]
+        
+        CD -->|files_to_process| C
+        C -->|flat documents| E
+        E -->|vectors| D
+    end
+    
+    subgraph "scripts/query.py"
+        Q[User Query]
+        QE[core/embeddings.py]
+        R[core/retrieval.py]
+        DB[core/db.py]
+        L[core/llm.py]
+        
+        Q --> QE
+        QE --> R
+        R <-->|Hybrid + RRF| DB
+        R -->|Top K Results| L
+        L --> Answer
+    end
+
+    subaxis -.-> CD
+```
 
 ## Tech Stack
 

@@ -1,3 +1,13 @@
+import sys
+import os
+from pathlib import Path
+
+# Add the project root (parent directory of scripts/) to sys.path
+# so Python can find 'core' and 'config'
+current_dir = Path(__file__).parent.resolve()
+project_root = current_dir.parent
+sys.path.append(str(project_root))
+
 from core.db import Database
 from core.retrieval import Retriever
 from core.embeddings import Embedding
@@ -21,9 +31,10 @@ def main():
     embed_model = Embedding(EMBED_MODEL_PATH) 
     local_model = LLM()
 
-    query = ""
-    while query != 'exit':
-        query = input("What do you want to know? ")
+    while True:
+        query = input("\nWhat do you want to know? write 'exit' to quit\n")
+        if query == 'exit':
+            break
 
         query_embed = embed_model.embed_query(query)
 

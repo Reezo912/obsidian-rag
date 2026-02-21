@@ -2,44 +2,42 @@ from pathlib import Path
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 import hashlib
 
-"""
-This script only works for .MD at the moment, since its for my obsidian Vault 
 
-TODO add more data types
-"""
-### No clase en este script por simplicidad, si en el futuro anado otros tipos de documentos como input, hare una clase.
+class Chunker:
+    """
+    Funny name hehe
+    This class is in charge of chuncking texts, rn it only supports markdown files
+    """
+    def __init__(self):
+        self.splitter = MarkdownHeaderTextSplitter(
+            headers_to_split_on=[
+                ("#", "h1"),
+                ("##", "h2"),
+                ("###", "h3"),
+            ]
+        )
 
+    def _generate_chunk_id(self, filename: str, text: str) -> str:
+        """Generate a deterministic ID based on filename and content hash"""
+        content_hash = hashlib.md5(text.encode()).hexdigest()[:8]
+        return f"{filename}_{content_hash}"
 
-def generate_chunk_id(filename: str, text: str) -> str:
-    """Generate a deterministic ID based on filename and content hash."""
-    content_hash = hashlib.md5(text.encode()).hexdigest()[:8]
-    return f"{filename}_{content_hash}"
+    def process_files(self, files_to_process: dict) -> list:
+        """Read files, chunk them, return flat DB-ready documents (without vectors)"""
+        documents = []
+        for file_path, mod_date in files_to_process.items():
+            file = Path(file_path)
+            content = file.read_text(encoding="utf-8")
+            chunks = self.splitter.split_text(content)
 
-
-def chunk_md(content: str, filename: str, filepath: str, mod_date) -> list:
-    """Function to genereate chunks out of markdown strings"""
-    splitter = MarkdownHeaderTextSplitter(
-        headers_to_split_on=[
-            ("#", "h1"),
-            ("##", "h2"),
-            ("###", "h3"),
-        ]
-    )
-
-    chunks = splitter.split_text(content)
-    data = []
-    for chunk in chunks:
-        # Filter empty chunks
-        if chunk.page_content.strip():
-            data.append(
-                {
-                    "text": chunk.page_content,
-                    "metadata": {
-                        "file": filename,
-                        "path": str(filepath),
-                        "headers": chunk.metadata,
-                        "date_modified": mod_date,
-                    },
-                }
-            )
-    return data
+            for chunk in chunks:
+                if chunk.page_content.strip():
+                    documents.append({
+                        "text": chunk.page_content,
+                        "file": file.name,
+                        "path": str(file),
+                        "headers": str(chunk.metadata),
+                        "id": self._generate_chunk_id(file.name, chunk.page_content),
+                        "date_indexed": mod_date,
+                    })
+        return documents
