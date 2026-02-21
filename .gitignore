@@ -1,0 +1,19 @@
+# Dev documentation
+project_info.md
+Review.md
+Scripts-functions.txt
+e470f21f-f0c8-41ca-abd8-36f86dc6d273.markdown
+
+# Data & models
+/data
+/models
+/test_data
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# IDE
+/.vscode

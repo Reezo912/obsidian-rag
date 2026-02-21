@@ -1,0 +1,5 @@
+lancedb
+sentence-transformers
+langchain-text-splitters
+openai
+rank-bm25
