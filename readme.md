@@ -37,6 +37,9 @@ The project follows a modular design with two main pipelines:
 - **FastAPI endpoint** (`api/api.py`) exposing OpenAI-compatible endpoints (`/v1/chat/completions`, `/v1/models`)
 - **Open WebUI integration** for a polished chat interface with **Streaming (SSE)**
 - **Conversational memory** context extraction
+- **Dynamic Model Selection**: Choose any loaded LM Studio model directly from the UI
+- **Local Orchestrator**: `main.py` script to launch both API and UI results in one command
+- **Smart Error Discovery**: User-friendly chat alerts when models aren't loaded or servers are down
 
 ### 📋 Phase 1: Core Systems
 - [x] Ingestion pipeline with change detection

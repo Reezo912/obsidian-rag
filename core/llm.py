@@ -36,13 +36,14 @@ class LLM:
         """
         return self.prompt
 
-    def get_answer(self, query, context, chat_history, stream=False):
+    def get_answer(self, query, context, chat_history, requested_model=None, stream=False):
         """
         This method builds the prompt and then gets the answer from the LLM
         Args:
             query (str): The query to be answered
             context (str): The context to be used to answer the query
             chat_history (list): The chat history to be used to answer the query
+            requested_model (str): Optional. The specific model requested by the UI.
             stream (bool): Whether to stream the response back
         
         Returns:
@@ -51,16 +52,26 @@ class LLM:
         self._build_prompt(query, context, chat_history)
         if not self.prompt:
             raise ValueError("THERE IS NO PROMPT TO PROCESS")
-        try:    
+            
+        # Get requested model by Open WebUI, or the default from config
+        target_model = requested_model if requested_model else self.model
+            
+        try:
             response = self.client.chat.completions.create(
-                model=self.model,
+                model=target_model,
                 messages=[{"role": "user", "content": self.prompt}],
                 stream=stream
             )
         except Exception as e:
-            print("Error getting answer: ", e)
-            return ""
-            
+            error_str = str(e).lower()
+            if "failed to load model" in error_str:
+                error_msg = f"Error loading model '{target_model}', check if there is a model loaded and the name in config.py is correct."
+            else:
+                error_msg = f"Error generating response: {str(e)}"
+                
+            print(error_msg)
+            return (chunk for chunk in [error_msg]) if stream else error_msg
+        
         if stream:
             return (chunk.choices[0].delta.content or "" for chunk in response)
         else:

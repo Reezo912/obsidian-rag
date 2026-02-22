@@ -3,3 +3,6 @@ sentence-transformers
 langchain-text-splitters
 openai
 rank-bm25
+fastapi
+uvicorn
+pydantic

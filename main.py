@@ -20,14 +20,14 @@ def main():
         stderr=subprocess.STDOUT
     )
     
-    # Damos un par de segundos para que la API cargue los modelos localmente en la GPU
+    # Give a few seconds for the API to load the models locally into the GPU
     print("      Loading LanceDB and Embedding Models into GPU (this may take a moment)...")
     time.sleep(4)
     
     # 2. Start Open WebUI
     print("[2/2] Starting Open WebUI Frontend...")
     
-    # Preparamos las variables de entorno necesarias para Open WebUI
+    # Prepare the necessary environment variables for Open WebUI
     env = os.environ.copy()
     env["OPENAI_API_BASE_URL"] = "http://127.0.0.1:8000/v1"
     env["OPENAI_API_KEY"] = "nada"
@@ -46,13 +46,13 @@ def main():
         print("Press Ctrl+C to stop all services.")
         print("="*60 + "\n")
         
-        # Mantenemos el script vivo esperando a que el usuario pulse Ctrl+C
+        # Keep the script alive waiting for the user to press Ctrl+C
         frontend_process.wait()
         
     except KeyboardInterrupt:
         print("\n\n🛑 Shutting down services...")
     finally:
-        # Nos aseguramos de matar los procesos huérfanos antes de cerrar
+        # Kill orphan processes before closing
         print("Killing backend server...")
         backend_process.terminate()
         try:
