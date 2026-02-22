@@ -2,8 +2,6 @@ import sys
 import os
 from pathlib import Path
 
-# Add the project root (parent directory of scripts/) to sys.path
-# so Python can find 'core' and 'config'
 current_dir = Path(__file__).parent.resolve()
 project_root = current_dir.parent
 sys.path.append(str(project_root))
@@ -31,6 +29,8 @@ def main():
     embed_model = Embedding(EMBED_MODEL_PATH) 
     local_model = LLM()
 
+    conversation_history = []
+
     while True:
         query = input("\nWhat do you want to know? write 'exit' to quit\n")
         if query == 'exit':
@@ -42,7 +42,9 @@ def main():
 
         context = build_context(query_response)
 
-        answer = local_model.get_answer(query, context)
+        answer = local_model.get_answer(query, context, conversation_history)
+
+        conversation_history.append((query, answer))    
 
         print(answer)
 

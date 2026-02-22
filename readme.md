@@ -34,14 +34,29 @@ The project follows a modular design with two main pipelines:
 - CLI query script (`scripts/query.py`)
 - Centralized configuration (`config.py`)
 - Removed deprecated monolithic search script (`core/search.py`)
+- **FastAPI endpoint** (`api/api.py`) exposing OpenAI-compatible endpoints (`/v1/chat/completions`, `/v1/models`)
+- **Open WebUI integration** for a polished chat interface with **Streaming (SSE)**
+- **Conversational memory** context extraction
 
-### 📋 Planned
-- Cross-encoder re-ranking (`cross-encoder/ms-marco-MiniLM-L-6-v2`) for precision filtering
-- Confidence threshold to prevent hallucinations when no relevant context exists
-- File watcher (`watchdog`) for automatic re-ingestion on vault changes
-- FastAPI endpoint for programmatic access
-- Open WebUI integration for a proper chat interface
-- Tests
+### 📋 Phase 1: Core Systems
+- [x] Ingestion pipeline with change detection
+- [x] Hybrid search & RRF fusion
+- [x] LLM integration & Modular refactoring
+
+### 🧠 Phase 2: Memory & Refinement (Current)
+- [x] Conversational memory (chat history support)
+- [ ] Cross-encoder re-ranking (`ms-marco-MiniLM`) and confidence thresholds
+- [ ] File watcher (`watchdog`) for auto-syncing vault changes
+- [ ] Unit and integration tests
+
+### 🌐 Phase 3: Production UI
+- [x] FastAPI endpoint for programmatic access
+- [x] Open WebUI integration for a polished chat interface
+
+### 🤖 Phase 4: Agentic Evolution
+- Multi-modal document support (PDF, Word)
+- Internet access via Tool Calling (e.g., DuckDuckGo API)
+- Autonomous Note Creation / Modification (Writing Agents with Human-in-the-loop)
 
 ## Architecture Flow
 

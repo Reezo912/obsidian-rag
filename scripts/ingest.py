@@ -2,8 +2,6 @@ import sys
 import os
 from pathlib import Path
 
-# Add the project root (parent directory of scripts/) to sys.path
-# so Python can find 'core' and 'config'
 current_dir = Path(__file__).parent.resolve()
 project_root = current_dir.parent
 sys.path.append(str(project_root))
