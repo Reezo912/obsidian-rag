@@ -1,67 +1,29 @@
 # 📚 Obsidian RAG
 
-> ⚠️ **Work in Progress** — Modular refactor in progress
+A professional, local-first RAG assistant for querying your personal Obsidian vault. This project goes beyond basic vector search by implementing **hybrid retrieval** (semantic + BM25) and **Reciprocal Rank Fusion (RRF)** to provide high-accuracy context for local LLMs.
 
-A local-first RAG assistant for querying my personal Obsidian vault. Instead of relying on basic vector search like most RAG implementations, this project uses **hybrid retrieval** (semantic + BM25) combined with **Reciprocal Rank Fusion** to improve result relevance before sending context to a local LLM.
+Everything runs 100% locally — no API keys, no cloud, and no data leaves your machine.
 
-Everything runs locally — no API keys, no cloud, no data leaving my machine.
+---
 
-## Why This Project
+## 🚀 Key Value Proposition
 
-Most RAG tutorials stop at "embed → vector search → LLM". This misses a lot of relevant results because pure semantic search struggles with exact terms, names, and acronyms. By combining dense vectors with BM25 lexical search and fusing with RRF, retrieval quality improves significantly — especially for technical notes mixing code, formulas, and natural language.
+Most RAG implementations fail on technical notes because pure semantic search struggles with specific terms, code snippets, and acronyms. This system solves that by:
+- **Hybrid Retrieval**: Parallel execution of Vector Similarity (dense) and BM25 (lexical/keyword) search.
+- **RRF Fusion**: Merging multiple search results into a single, high-relevance ranking.
+- **Modern UX**: A professional ChatGPT-like interface via **Open WebUI** with full **Streaming** support.
 
-## Architecture
+---
 
-The project follows a modular design with two main pipelines:
+## 🏗️ Architecture
 
-**Ingestion** — Reads `.md` files from an Obsidian vault, detects changes (new/modified/deleted), chunks by markdown headers, generates embeddings, and stores everything in LanceDB with a full-text search index.
+The system is built as a modular suite of microservices managed by a central orchestrator:
 
-**Retrieval** — Takes a user query, runs parallel vector + BM25 searches, fuses results with RRF, builds a context string, and sends it to a local LLM (RNJ-1 via LM Studio) for answer generation.
+- **Ingestion Pipeline**: Incrementally indexes `.md` files, detecting new, modified, or deleted content. Uses markdown header-aware chunking to preserve logical structure.
+- **FastAPI Gateway**: An OpenAI-compatible API serving as the brain of the operation, handling hybrid search, context building, and conversational memory.
+- **Local Orchestrator**: A unified launcher (`main.py`) that manages the lifecycle of the backend and frontend services.
 
-## Current Status
-
-### ✅ Implemented
-- Ingestion pipeline with incremental change detection (new/modified/deleted files)
-- Refactored `scripts/ingest.py` to use modular `core/` components (no duplicated logic)
-- Markdown chunking by headers (`h1`, `h2`, `h3`) with empty chunk filtering
-- Deterministic chunk IDs via content hashing
-- Embedding generation with `bge-large-en-v1.5` (GPU)
-- LanceDB storage with native full-text search index
-- Hybrid search: vector similarity + BM25
-- RRF fusion with hash-based document IDs
-- LLM integration via LM Studio (OpenAI-compatible API)
-- Modular `core/` package: `db.py`, `chunking.py`, `embeddings.py`, `retrieval.py`, `llm.py`
-- CLI query script (`scripts/query.py`)
-- Centralized configuration (`config.py`)
-- Removed deprecated monolithic search script (`core/search.py`)
-- **FastAPI endpoint** (`api/api.py`) exposing OpenAI-compatible endpoints (`/v1/chat/completions`, `/v1/models`)
-- **Open WebUI integration** for a polished chat interface with **Streaming (SSE)**
-- **Conversational memory** context extraction
-- **Dynamic Model Selection**: Choose any loaded LM Studio model directly from the UI
-- **Local Orchestrator**: `main.py` script to launch both API and UI results in one command
-- **Smart Error Discovery**: User-friendly chat alerts when models aren't loaded or servers are down
-
-### 📋 Phase 1: Core Systems
-- [x] Ingestion pipeline with change detection
-- [x] Hybrid search & RRF fusion
-- [x] LLM integration & Modular refactoring
-
-### 🧠 Phase 2: Memory & Refinement (Current)
-- [x] Conversational memory (chat history support)
-- [ ] Cross-encoder re-ranking (`ms-marco-MiniLM`) and confidence thresholds
-- [ ] File watcher (`watchdog`) for auto-syncing vault changes
-- [ ] Unit and integration tests
-
-### 🌐 Phase 3: Production UI
-- [x] FastAPI endpoint for programmatic access
-- [x] Open WebUI integration for a polished chat interface
-
-### 🤖 Phase 4: Agentic Evolution
-- Multi-modal document support (PDF, Word)
-- Internet access via Tool Calling (e.g., DuckDuckGo API)
-- Autonomous Note Creation / Modification (Writing Agents with Human-in-the-loop)
-
-## Architecture Flow
+### 📊 System Flow
 
 ```mermaid
 graph TD
@@ -70,53 +32,110 @@ graph TD
     classDef script fill:#539bf5,stroke:#2b6a30,color:#fff,font-weight:bold;
     classDef core fill:#348039,stroke:#2b6a30,color:#fff;
     classDef db fill:#b083f0,stroke:#6e40c9,color:#fff;
-    classDef llm fill:#e34c26,stroke:#f0883e,color:#fff;
+    classDef ui fill:#f69d50,stroke:#f0883e,color:#fff,font-weight:bold;
 
     Vault[(Obsidian Vault)]:::file
     DB[(LanceDB)]:::db
     User((User)):::file
-    Answer>LLM Answer]:::llm
+    
+    subgraph "Frontend & Orchestration"
+        Main[main.py]:::script
+        WebUI[Open WebUI]:::ui
+        API[api/api.py]:::core
+    end
 
-    subgraph "Ingestion Pipeline"
-        Ingest[scripts/ingest.py]:::script
+    subgraph "Processing Core"
         Chunk[core/chunking.py]:::core
-        EmbedI[core/embeddings.py]:::core
-        DBWrite[core/db.py]:::core
-    end
-
-    subgraph "Retrieval Pipeline"
-        Query[scripts/query.py]:::script
-        EmbedQ[core/embeddings.py]:::core
+        Embed[core/embeddings.py]:::core
         Ret[core/retrieval.py]:::core
-        LLM[core/llm.py]:::llm
+        LLM[core/llm.py]:::core
     end
 
-    %% Flow: Ingestion (Left Column)
-    Vault -- "Reads .md (if changed)" --> Ingest
-    Ingest -- "Content" --> Chunk
-    Chunk -- "Flat Chunks + IDs" --> EmbedI
-    EmbedI -- "Vectors" --> DBWrite
-    DBWrite -- "Save Data & Index FTS" --> DB
-
-    %% Flow: Retrieval (Right Column)
-    User -- "Asks Question" --> Query
-    Query -- "Raw Text" --> EmbedQ
-    EmbedQ -- "Query Vector" --> Ret
-    Ret <== "Vector + BM25 Search" ==> DB
-    Ret -- "RRF Fused Results" --> Query
-    Query -- "Context + Prompt" --> LLM
-    LLM -- "Generates" --> Answer
+    %% Flow
+    Main -- "Starts" --> API
+    Main -- "Starts" --> WebUI
+    
+    Vault -- "Ingest (scripts/ingest.py)" --> Chunk
+    Chunk --> Embed --> DB
+    
+    User -- "Query" --> WebUI
+    WebUI -- "v1/chat/completions" --> API
+    API -- "Hybrid Search" --> Ret
+    Ret <==> DB
+    Ret -- "Prompt + Context" --> LLM
+    LLM -- "Stream" --> API --> WebUI
 ```
 
-## Tech Stack
+---
+
+## 🗺️ Roadmap: The Path to Agentic RAG
+
+The project is evolving through four distinct phases of development.
+
+### ✅ Phase 1: Core & Hybrid Systems (Complete)
+- [x] **Incremental Ingestion**: Synchronization based on file modification dates.
+- [x] **Hybrid Search**: Semantic + BM25 keyword search.
+- [x] **RRF Fusion**: Reciprocal Rank Fusion for combined rankings.
+- [x] **SSE Streaming**: Typing animation/streaming responses in the UI.
+- [x] **Conversational Memory**: Automatic context extraction from chat history.
+
+### 🧠 Phase 2: Advanced RAG Refinement (In Progress)
+- [ ] **Cross-Encoder Re-ranking**: Using `ms-marco-MiniLM` to pick the best Top-5 from RRF results.
+- [ ] **Parent Document Retrieval**: Providing the LLM with full sections instead of isolated chunks.
+- [ ] **Multi-format Support**: Native PDF ingestion and processing.
+- [ ] **Live Watcher**: Background file-system events for real-time indexing.
+
+### ⚡ Phase 3: Intelligence & Agility (Planned)
+- [ ] **Query Expansion**: Using LLM to generate search variations.
+- [ ] **HyDE**: Hypothetical Document Embeddings for better query alignment.
+- [ ] **Metadata Filtering**: Scoped searching using Obsidian #tags and folders.
+
+### 🤖 Phase 4: Agentic Evolution (Future)
+- [ ] **Internet Search**: Tool calling for real-time external knowledge.
+- [ ] **Writing Agent**: Autonomous note creation and modification.
+- [ ] **Self-Reflection**: Verification loop for answer accuracy.
+
+---
+
+## 🛠️ Getting Started
+
+### 1. Setup
+1. Clone the repository.
+2. Create and activate a environment (Conda/Venv):
+   ```bash
+   conda create -n AI_RAG python=3.12
+   conda activate AI_RAG
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Update `config.py` with your `VAULT_PATH`.
+
+### 2. Usage
+**First Indexing:**
+```bash
+python scripts/ingest.py
+```
+
+**Run the Platform:**
+```bash
+python main.py
+```
+Access the dashboard at `http://localhost:8080`.
+
+---
+
+## ⚙️ Tech Stack
 
 | Component | Choice | Why |
 |-----------|--------|-----|
-| Vector DB | LanceDB | Embedded, no server needed, native FTS support |
-| Embeddings | bge-large-en-v1.5 | Top MTEB benchmark, 1024 dims |
-| LLM | RNJ-1 8B via LM Studio | Good at code/STEM, runs locally on RTX 4080 |
-| Chunking | LangChain MarkdownHeaderTextSplitter | Preserves document structure |
+| **Vector DB** | LanceDB | Embedded, ultra-fast, native Full-Text Search index. |
+| **Embeddings** | bge-large-en-v1.5 | SOTA performance / GPU optimized. |
+| **LLM Backend** | LM Studio | OpenAI-compatible server for local inference. |
+| **Orchestrator** | Python / Subprocess | Controlled management of FastAPI and WebUI. |
 
-## License
+---
 
+## ⚖️ License
 MIT
